@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # --- Servicio de la Base de Datos ---
+  mongo_db:
+    image: mongo:latest
+    container_name: mi-mongo-db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      -  monguito
+
+ 
+  flask_app:
+    build: .
+    container_name: sleepy_montalcini
+    ports:
+      - "5000:5000"
+    environment:
+      MONGODB_URI: "mongodb://admin:password123@mongo_db:27017/sensoresDB?authSource=admin"
+    depends_on:
+      - mongo_db
+    networks:
+      -  monguito
+
+
+  mongo_express:
+    image: mongo-express:latest
+    container_name: mi-mongo-gui
+    ports:
+      - "8081:8081"
+    environment:
+      # Esta es la URL de conexión que usa Mongo Express
+      # ¡Nota que usa 'mongo_db', el nombre del servicio, no 'localhost'!
+      ME_CONFIG_MONGODB_URL: "mongodb://admin:password123@mongo_db:27017/?authSource=admin"
+ 
+      ME_CONFIG_BASICAUTH_USERNAME: admin-ui
+      ME_CONFIG_BASICAUTH_PASSWORD: password-ui
+    depends_on:
+      - mongo_db
+    networks:
+      -  monguito
+volumes:
+  mongo-data:
