@@ -20,7 +20,7 @@ services:
     build: .
     container_name: sleepy_montalcini
     ports:
-      - "5000:5000"
+      - "4000:4000"
     environment:
       MONGODB_URI: "mongodb://admin:password123@mongo_db:27017/sensoresDB?authSource=admin"
     depends_on:
@@ -43,7 +43,10 @@ services:
       ME_CONFIG_BASICAUTH_PASSWORD: password-ui
     depends_on:
       - mongo_db
-    networks:
-      -  monguito
+networks:
+  monguito:
+    driver: bridge
+
 volumes:
   mongo-data:
+    driver: local
