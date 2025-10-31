@@ -1,52 +1,56 @@
-version: '3.8'
 
 services:
-  # --- Servicio de la Base de Datos ---
-  mongo_db:
+  web:
+    build:
+      context: ./src
+      dockerfile: dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      - "./src:/app/src"
+    environment:
+        - MONGO_URI=${MONGO_URI}
+      # - MONGO_HOST=mongo
+      # - MONGO_PORT=27017
+      # - MONGO_DB=proyecto_db
+      # - MONGO_USER=admin
+      # - MONGO_PASSWORD=admin123
+    depends_on:
+      - mongo
+    networks:
+     - app-networks
+  
+  mongo:
     image: mongo:latest
-    container_name: mi-mongo-db
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=proyecto_db
     volumes:
       - mongo-data:/data/db
     networks:
-      -  monguito
+     - app-networks
 
- 
-  flask_app:
-    build: .
-    container_name: sleepy_montalcini
-    ports:
-      - "4000:4000"
-    environment:
-      MONGODB_URI: "mongodb://admin:password123@mongo_db:27017/sensoresDB?authSource=admin"
-    depends_on:
-      - mongo_db
-    networks:
-      -  monguito
-
-
-  mongo_express:
+  mongo-express:
     image: mongo-express:latest
-    container_name: mi-mongo-gui
     ports:
       - "8081:8081"
     environment:
-      # Esta es la URL de conexión que usa Mongo Express
-      # ¡Nota que usa 'mongo_db', el nombre del servicio, no 'localhost'!
-      ME_CONFIG_MONGODB_URL: "mongodb://admin:password123@mongo_db:27017/?authSource=admin"
- 
-      ME_CONFIG_BASICAUTH_USERNAME: admin-ui
-      ME_CONFIG_BASICAUTH_PASSWORD: password-ui
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin123
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
     depends_on:
-      - mongo_db
+      - mongo
+    networks:
+     - app-networks
+
 networks:
-  monguito:
+  app-networks:
     driver: bridge
 
 volumes:
   mongo-data:
-    driver: local
