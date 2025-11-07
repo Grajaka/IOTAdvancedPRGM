@@ -65,7 +65,7 @@ def agregar_dato_prueba():
     else:
         return jsonify({"error": "Connection to database is not established."}), 500
     
-@app.route('receive_sensor_data', methods=['POST'])
+@app.route('/receive_sensor_data', methods=['POST'])
 def receive_sensor_data():
     if SensorsReaders_collection is None:
         
