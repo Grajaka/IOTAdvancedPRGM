@@ -48,9 +48,25 @@ services:
     networks:
      - app-networks
 
+  grafana:
+    image: grafana/grafana-oss:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - app-networks
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_COOKIE_SAMESITE=none    
+
 networks:
   app-networks:
     driver: bridge
 
 volumes:
   mongo-data:
+  grafana-data:

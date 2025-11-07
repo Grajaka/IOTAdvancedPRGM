@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, jsonify, request
 from flask_pymongo import PyMongo
-
+from datetime import datetime
 from dotenv import load_dotenv
 
 
@@ -44,7 +44,7 @@ def ruta():
 def index():
     return render_template('index.html')
 
-@app.route('/agregar_dato_prueba')
+@app.route('/add_probe_data')
 def agregar_dato_prueba():
     """
     Ruta de prueba para MANDAR (insertar) un dato de ejemplo
@@ -53,7 +53,7 @@ def agregar_dato_prueba():
     if SensorsReaders_collection is not None:
         try:
             
-            data_sensor = {"sensor": "temperature_probe", "value": 30.1, "unite": "C"}
+            data_sensor = {"sensor": "temperature_probe", "value": 32, "unite": "C"}
             # Insertamos el dato en la colección 'sensor1'
             result = SensorsReaders_collection.insert_one(data_sensor)
             return jsonify({
@@ -64,6 +64,55 @@ def agregar_dato_prueba():
             return jsonify({"error": f"Error inserting into database: {e}"}), 500
     else:
         return jsonify({"error": "Connection to database is not established."}), 500
+    
+@app.route('/receive_sensor_data', methods=['POST'])
+def receive_sensor_data():
+    if SensorsReaders_collection is None:
+        
+        return jsonify({"error": "La conexión a la base de datos no está establecida."}), 503
+
+    try:
+        # Obtener los datos JSON
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No se proporcionó un payload JSON"}), 400
+
+        
+        sensor_type = data.get('sensor_type')
+        value = data.get('value')
+        unit = data.get('unit', 'N/A') 
+
+        if sensor_type is None or value is None:
+            return jsonify({"error": "Faltan campos obligatorios: 'sensor_type' o 'value'"}), 400
+
+        
+        doc_to_insert = {
+            "sensor": sensor_type,
+            "valor": value,
+            "unidad": unit,
+            "timestamp": datetime.now() 
+        }
+
+        
+        result = SensorsReaders_collection.insert_one(doc_to_insert)
+
+
+        return jsonify({
+            "status": "success",
+            "message": "Data sensor received and saved succesfully.",
+            "id_mongo": str(result.inserted_id),
+            "data_received": doc_to_insert
+        }), 201
+    except Exception as e:
+        print(f"Error processing data sensor: {e}")
+        return jsonify({"status": "error", "message": f"Server internal error: {e}"}), 500
+    
+@app.route('/dashboard')
+def dashboard():
+    """Muestra el dashboard de Grafana incrustado."""
+    # Simplemente renderiza una plantilla HTML
+    return render_template('dashboard.html')
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

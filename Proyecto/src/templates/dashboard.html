@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* Oculta barras de scroll si el iframe se ajusta */
+        }
+        .grafana-iframe {
+            width: 100%;
+            height: 100vh; /* Ocupa toda la altura de la ventana */
+            border: none;   /* Sin bordes feos */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mi Dashboard de Monitoreo</h1>
+    <p>Aquí puedes ver el estado del sistema en vivo desde Grafana.</p>
+
+    <iframe 
+        src="http://localhost:3000" 
+        class="grafana-iframe">
+    </iframe>
+
+</body>
+</html>
