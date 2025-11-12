@@ -35,6 +35,10 @@ except Exception as e:
     mongo = None
     SensorsReaders_collection = None
 
+@app.route('/')
+def ruta():
+    return 'Mi primer hola mundo'
+
 
 @app.route('/index')
 def index():
