@@ -35,6 +35,52 @@ except Exception as e:
     mongo = None
     SensorsReaders_collection = None
 
+@app.route('/search', methods=['POST'])
+def search():
+
+    return jsonify(["sensor1_temperatures"]), 200
+
+
+@app.route('/query', methods=['POST'])
+def query():
+    
+
+    if SensorsReaders_collection is None:
+        return jsonify({"error": "La conexión a la base de datos no está establecida."}), 503
+
+    try:
+
+        data_cursor = SensorsReaders_collection.find().sort("timestamp", -1).limit(1000)
+        
+        datapoints = []
+        for document in data_cursor:
+            # Convertimos el objeto datetime a timestamp UNIX en milisegundos (ms)
+            timestamp_ms = int(document["timestamp"].timestamp() * 1000)
+            datapoints.append([document["valor"], timestamp_ms])
+            
+
+        response = [
+            {
+                
+                "target": "sensor1_temperatures", 
+                "datapoints": datapoints
+            }
+        ]
+
+        return jsonify(response)
+
+    except Exception as e:
+        print(f"Error al procesar la consulta de Grafana: {e}")
+        return jsonify({"status": "error", "message": f"Error interno del servidor: {e}"}), 500
+
+
+
+@app.route('/', methods=['GET', 'POST'])
+def root_path():
+    """El plugin llama a esta ruta para probar la conexión."""
+    # Simplemente devolvemos 200 OK.
+    return 'OK', 200
+
 @app.route('/')
 def ruta():
     return 'Mi primer hola mundo'
