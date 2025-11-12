@@ -35,10 +35,6 @@ except Exception as e:
     mongo = None
     SensorsReaders_collection = None
 
-@app.route('/')
-def ruta():
-    return 'Mi primer hola mundo'
-
 
 @app.route('/index')
 def index():
@@ -79,16 +75,16 @@ def receive_sensor_data():
             return jsonify({"error": "No se proporcionó un payload JSON"}), 400
 
         
-        sensor_type = data.get('sensor_type')
+        sensor_id = data.get('sensor_id')
         value = data.get('value')
         unit = data.get('unit', 'N/A') 
 
-        if sensor_type is None or value is None:
-            return jsonify({"error": "Faltan campos obligatorios: 'sensor_type' o 'value'"}), 400
+        if sensor_id is None or value is None:
+            return jsonify({"error": "Faltan campos obligatorios: 'sensor_id' o 'value'"}), 400
 
         
         doc_to_insert = {
-            "sensor": sensor_type,
+            "sensor": sensor_id,
             "valor": value,
             "unidad": unit,
             "timestamp": datetime.now() 
