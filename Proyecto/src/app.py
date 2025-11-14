@@ -3,7 +3,9 @@ from flask import Flask, render_template, jsonify, request
 from flask_pymongo import PyMongo
 from datetime import datetime
 from dotenv import load_dotenv
-
+# Las siguientes importaciones no son necesarias:
+# from json import dumps 
+# from bson.objectid import ObjectId
 
 # --- CONFIGURACIÓN E INICIALIZACIÓN ---
 
@@ -25,6 +27,7 @@ print(f"Intentando conectar a MongoDB...")
 app.config["MONGO_URI"] = mongo_uri
 
 try:
+    # PyMongo intentará la conexión al inicializarse
     mongo = PyMongo(app)
     
     SensorsReaders_collection = mongo.db.SensorsReaders 
@@ -70,7 +73,7 @@ def search():
 @app.route('/query', methods=['POST'])
 def query():
     """
-    Ruta principal de consulta. Grafana envía el rango de tiempo y las métricas solicitadas.
+    2. Grafana llama a esta ruta para obtener los datos reales para el gráfico.
     """
     
     if SensorsReaders_collection is None:
@@ -79,38 +82,42 @@ def query():
     try:
         # **1. Obtener la solicitud JSON de Grafana**
         req = request.get_json()
-        
-        # **2. Extraer los Targets solicitados**
-        # Si no hay targets, devolvemos una lista vacía.
         targets = req.get('targets', [])
         
-        # Lista final para almacenar todas las series de tiempo
         final_response = []
-
-        # En este ejemplo, iteramos sobre los targets, pero como solo tenemos uno:
-        # Tomamos el nombre del target de la primera consulta (si existe)
+        # Tomamos el nombre del target de la primera consulta
         target_name = targets[0]['target'] if targets and 'target' in targets[0] else "sensor1_temperatures"
 
 
-        # 3. Obtener los datos de MongoDB (Mantenemos la lógica de obtener los últimos 1000)
+        # Obtener los datos de MongoDB (Mantenemos la lógica de obtener los últimos 1000)
+        # Nota: La consulta real de Grafana debería usar req['range'] para filtrar por tiempo
         data_cursor = SensorsReaders_collection.find().sort("timestamp", -1).limit(1000)
         
-        # 4. Formateamos los datos
         datapoints = []
         for document in data_cursor:
-            value = document.get("value")
+            
+            value = document.get("value") 
 
+            # CRÍTICO: Asegurar que el valor sea numérico y convertirlo a float
             if value is not None:
                 try:
+                    # Intenta convertir el valor a float para graficar
                     numeric_value = float(value)
-                    timestamp_ms = int(document["timestamp"].timestamp() * 1000)
+                    
+                    # Convertimos el objeto datetime a timestamp UNIX en milisegundos (ms)
+                    timestamp_ms = int(document["timestamp"].timestamp() * 1000) 
+                    # Formato: [valor, timestamp_ms]
                     datapoints.append([numeric_value, timestamp_ms])
-                except (ValueError, TypeError):
-                    continue # Ignorar valores no numéricos
 
-        # 5. Creamos la respuesta final etiquetada
+                except (ValueError, TypeError):
+                    # Ignoramos valores que no se pueden convertir a números
+                    print(f"Advertencia: Valor no numérico encontrado en la BD: {value}. Ignorando.")
+                except KeyError:
+                    # Esto ocurre si el campo 'timestamp' no existe en el documento
+                    print(f"Advertencia: Campo 'timestamp' no encontrado en el documento. Ignorando.")
+            
+        # El target debe coincidir con el devuelto en la ruta /search
         final_response.append({
-            # Usamos el nombre del Target que Grafana nos envió
             "target": target_name, 
             "datapoints": datapoints
         })
@@ -122,7 +129,6 @@ def query():
         return jsonify({"status": "error", "message": f"Error interno del servidor: {e}"}), 500
 
 
-
 # --- ENDPOINTS DE INSERCIÓN DE DATOS ---
 
 @app.route('/add_probe_data')
@@ -132,8 +138,8 @@ def agregar_dato_prueba():
     """
     if SensorsReaders_collection is not None:
         try:
-            # Aseguramos que el 'valor' sea numérico para la gráfica
-            data_sensor = {"sensor": "temperature_probe", "value": 32.5, "unit": "C", "timestamp": datetime.now()}
+            # CORRECCIÓN: Usamos 'value' para insertar
+            data_sensor = {"sensor": "temperature_probe", "value": 32.5, "unite": "C", "timestamp": datetime.now()}
             result = SensorsReaders_collection.insert_one(data_sensor)
             return jsonify({
                 "mensaje": "Data sensor load succesfully 'SensorsReaders'",
@@ -162,8 +168,8 @@ def receive_sensor_data():
         value = data.get('value')
         unit = data.get('unit', 'N/A') 
 
-        if sensor_id is None or value is None:
-            return jsonify({"error": "Faltan campos obligatorios: 'sensor_id' o 'value'"}), 400
+        if sensor_type is None or value is None:
+            return jsonify({"error": "Faltan campos obligatorios: 'sensor_type' o 'value'"}), 400
 
         # CRÍTICO: Intentar convertir el valor a flotante.
         try:
@@ -173,7 +179,7 @@ def receive_sensor_data():
         
         doc_to_insert = {
             "sensor": sensor_type,
-            "value": numeric_value, # Usamos el valor numérico
+            "value": numeric_value, 
             "unit": unit,
             "timestamp": datetime.now() 
         }
