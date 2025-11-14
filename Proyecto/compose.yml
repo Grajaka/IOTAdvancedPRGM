@@ -5,7 +5,7 @@ services:
       context: ./src
       dockerfile: dockerfile
     ports:
-      - "4000:4000"
+      - "5001:5001"
     volumes:
       - "./src:/app/src"
     environment:
@@ -60,7 +60,7 @@ services:
     environment:
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
-      # - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Editor
       # - GF_SECURITY_COOKIE_SAMESITE=none    
 
 networks:
