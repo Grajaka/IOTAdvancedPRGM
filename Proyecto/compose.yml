@@ -61,6 +61,7 @@ services:
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Editor
+      - GF_INSTALL_PLUGINS=simpod-json-datasource
       # - GF_SECURITY_COOKIE_SAMESITE=none    
 
 networks:

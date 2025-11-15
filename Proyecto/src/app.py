@@ -1,53 +1,47 @@
 import os
 from flask import Flask, render_template, jsonify, request
 from flask_pymongo import PyMongo
-from datetime import datetime
+from flask_cors import CORS
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
-# Las siguientes importaciones no son necesarias:
-# from json import dumps 
-# from bson.objectid import ObjectId
+from bson.json_util import dumps 
 
-# --- CONFIGURACIÓN E INICIALIZACIÓN ---
+# --- CONFIGURATION AND INITIALIZATION ---
 
-# Definimos la ruta al archivo .env
+# Define the path to the .env file
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 app = Flask(__name__)
+CORS(app)  # IMPORTANT: Enable CORS for Grafana
 
-# Configuración de MongoDB
+# MongoDB configuration
 mongo_uri = os.environ.get('MONGO_URI')
 
 if not mongo_uri:
-    # Se recomienda usar un logger o stderr para errores, pero print funciona
-    print("Error: La variable de entorno MONGO_URI no está configurada.")
+    print("Error: The MONGO_URI environment variable is not configured.")
     
-print(f"Intentando conectar a MongoDB...")
-# Asignar la URI de conexión a la configuración de PyMongo
+print(f"Attempting to connect to MongoDB...")
 app.config["MONGO_URI"] = mongo_uri
 
 try:
-    # PyMongo intentará la conexión al inicializarse
     mongo = PyMongo(app)
-    
     SensorsReaders_collection = mongo.db.SensorsReaders 
-    print("Conexión a MongoDB y colección 'SensorsReaders establecida.")
-
-    # Prueba de conexión
+    print("Connection to MongoDB and 'SensorsReaders' collection established.")
     SensorsReaders_collection.find_one()
-    print("Prueba de lectura a la colección 'SensorsReaders' exitosa.")
+    print("Read test to 'SensorsReaders' collection successful.")
 except Exception as e:
-    print(f"Error al conectar o interactuar con MongoDB: {e}")
+    print(f"Error connecting or interacting with MongoDB: {e}")
     mongo = None
     SensorsReaders_collection = None
 
-# --- ENDPOINTS GENERALES Y HEALTH CHECK ---
+# --- GENERAL ENDPOINTS AND HEALTH CHECK ---
 
-# RUTA PARA EL HEALTH CHECK Y LA CONEXIÓN (Grafana la usa para probar la fuente)
 @app.route('/', methods=['GET', 'POST'])
 def root_path():
-    """El plugin de Grafana llama a esta ruta para probar la conexión."""
-    return 'OK', 200
+    """The Grafana plugin calls this route to test the connection."""
+    return jsonify({"message": "OK"}), 200
 
 @app.route('/index')
 def index():
@@ -55,94 +49,186 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    """Muestra el dashboard de Grafana incrustado."""
+    """Displays the embedded Grafana dashboard."""
     return render_template('dashboard.html')
 
 
-# --- ENDPOINTS PARA GRAFANA SIMPLE JSON DATA SOURCE ---
+# --- ENDPOINTS FOR GRAFANA SIMPLE JSON DATA SOURCE ---
 
 @app.route('/search', methods=['POST'])
 def search():
     """
-    1. Grafana llama a esta ruta para obtener las métricas disponibles (Targets).
+    Grafana calls this route to get available metrics (Targets).
+    Returns a list of unique available sensors.
     """
-    # Devolvemos el nombre de la serie que Grafana usará para la consulta
-    return jsonify(["sensor1_temperatures"]), 200
+    try:
+        if SensorsReaders_collection is None:
+            return jsonify([]), 200
+        
+        # Get all unique sensor types
+        unique_sensors = SensorsReaders_collection.distinct('sensor')
+        
+        # If no sensors exist, return a default list
+        if not unique_sensors:
+            unique_sensors = ["Current", "temperature_probe"]
+        
+        print(f"Available sensors for Grafana: {unique_sensors}")
+        return jsonify(unique_sensors), 200
+    
+    except Exception as e:
+        print(f"Error in /search: {e}")
+        return jsonify(["Current", "temperature_probe"]), 200
 
 
 @app.route('/query', methods=['POST'])
 def query():
     """
-    2. Grafana llama a esta ruta para obtener los datos reales para el gráfico.
+    Grafana calls this route to get the actual data for the graph.
     """
     
     if SensorsReaders_collection is None:
-        return jsonify({"error": "La conexión a la base de datos no está establecida."}), 503
+        return jsonify([]), 200
 
     try:
-        # **1. Obtener la solicitud JSON de Grafana**
-        req = request.get_json()
+        # Get the JSON request from Grafana
+        req = request.get_json(force=True, silent=True)
+        
+        if req is None:
+            print("Warning: Received empty or invalid JSON request")
+            return jsonify([]), 200
+            
+        print(f"Request received from Grafana: {req}")
+        
+        # Extract the time range
+        range_data = req.get('range', {})
+        range_from = range_data.get('from')
+        range_to = range_data.get('to')
+        
+        # Extract the targets (requested metrics)
         targets = req.get('targets', [])
         
-        final_response = []
-        # Tomamos el nombre del target de la primera consulta
-        target_name = targets[0]['target'] if targets and 'target' in targets[0] else "sensor1_temperatures"
-
-
-        # Obtener los datos de MongoDB (Mantenemos la lógica de obtener los últimos 1000)
-        # Nota: La consulta real de Grafana debería usar req['range'] para filtrar por tiempo
-        data_cursor = SensorsReaders_collection.find().sort("timestamp", -1).limit(1000)
+        if not targets:
+            print("No targets received from Grafana")
+            return jsonify([]), 200
         
-        datapoints = []
-        for document in data_cursor:
+        final_response = []
+        
+        # Process each target
+        for target_obj in targets:
+            target_name = target_obj.get('target')
             
-            value = document.get("value") 
-
-            # CRÍTICO: Asegurar que el valor sea numérico y convertirlo a float
-            if value is not None:
+            if not target_name or target_obj.get('hide'):
+                continue
+            
+            print(f"Processing target: {target_name}")
+            
+            # Build the MongoDB query
+            query_filter = {"sensor": target_name}
+            
+            # If there's a time range, add it to the filter
+            if range_from and range_to:
                 try:
-                    # Intenta convertir el valor a float para graficar
-                    numeric_value = float(value)
+                    # Convert Grafana timestamps to datetime
+                    from_dt = datetime.fromisoformat(range_from.replace('Z', '+00:00'))
+                    to_dt = datetime.fromisoformat(range_to.replace('Z', '+00:00'))
                     
-                    # Convertimos el objeto datetime a timestamp UNIX en milisegundos (ms)
-                    timestamp_ms = int(document["timestamp"].timestamp() * 1000) 
-                    # Formato: [valor, timestamp_ms]
-                    datapoints.append([numeric_value, timestamp_ms])
-
-                except (ValueError, TypeError):
-                    # Ignoramos valores que no se pueden convertir a números
-                    print(f"Advertencia: Valor no numérico encontrado en la BD: {value}. Ignorando.")
-                except KeyError:
-                    # Esto ocurre si el campo 'timestamp' no existe en el documento
-                    print(f"Advertencia: Campo 'timestamp' no encontrado en el documento. Ignorando.")
+                    query_filter['timestamp'] = {
+                        '$gte': from_dt,
+                        '$lte': to_dt
+                    }
+                    print(f"Filtering by range: {from_dt} to {to_dt}")
+                except Exception as e:
+                    print(f"Error processing time range: {e}")
             
-        # El target debe coincidir con el devuelto en la ruta /search
-        final_response.append({
-            "target": target_name, 
-            "datapoints": datapoints
-        })
-
-        return jsonify(final_response)
+            # Get data from MongoDB
+            data_cursor = SensorsReaders_collection.find(query_filter).sort("timestamp", 1).limit(5000)
+            
+            datapoints = []
+            count = 0
+            
+            for document in data_cursor:
+                count += 1
+                # Support both 'value' and 'valor' (Spanish) for backward compatibility
+                value = document.get("value") or document.get("valor")
+                timestamp = document.get("timestamp")
+                
+                if value is not None and timestamp is not None:
+                    try:
+                        # Convert value to float
+                        numeric_value = float(value)
+                        
+                        # Convert timestamp to milliseconds
+                        timestamp_ms = int(timestamp.timestamp() * 1000)
+                        
+                        # Grafana format: [value, timestamp_ms]
+                        datapoints.append([numeric_value, timestamp_ms])
+                        
+                    except (ValueError, TypeError) as e:
+                        print(f"Error converting value: {value}, error: {e}")
+                    except AttributeError as e:
+                        print(f"Error with timestamp: {timestamp}, error: {e}")
+            
+            print(f"Found {count} documents for '{target_name}', {len(datapoints)} valid datapoints")
+            
+            # Add the result to the response
+            final_response.append({
+                "target": target_name,
+                "datapoints": datapoints
+            })
+        
+        print(f"Final response: {len(final_response)} series, total datapoints: {sum(len(s['datapoints']) for s in final_response)}")
+        return jsonify(final_response), 200
 
     except Exception as e:
-        print(f"Error al procesar la consulta de Grafana: {e}")
-        return jsonify({"status": "error", "message": f"Error interno del servidor: {e}"}), 500
+        print(f"Error processing Grafana query: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify([]), 200
 
 
-# --- ENDPOINTS DE INSERCIÓN DE DATOS ---
+# --- DATA INSERTION ENDPOINTS ---
 
 @app.route('/add_probe_data')
-def agregar_dato_prueba():
+def add_probe_data():
     """
-    Ruta de prueba para insertar un dato de ejemplo en la colección.
+    Test route to insert sample data into the collection.
     """
     if SensorsReaders_collection is not None:
         try:
-            # CORRECCIÓN: Usamos 'value' para insertar
-            data_sensor = {"sensor": "temperature_probe", "value": 32.5, "unite": "C", "timestamp": datetime.now()}
-            result = SensorsReaders_collection.insert_one(data_sensor)
+            sensor_data = {
+                "sensor": "temperature_probe", 
+                "value": 32.5, 
+                "unit": "C", 
+                # take current Colombia time and convert to UTC (timezone-aware)
+                "timestamp": datetime.now(ZoneInfo("America/Bogota")).astimezone(timezone.utc)
+            }
+            result = SensorsReaders_collection.insert_one(sensor_data)
             return jsonify({
-                "mensaje": "Data sensor load succesfully 'SensorsReaders'",
+                "message": "Sensor data loaded successfully to 'SensorsReaders'",
+                "id": str(result.inserted_id)
+            })
+        except Exception as e:
+            return jsonify({"error": f"Error inserting into database: {e}"}), 500
+    else:
+        return jsonify({"error": "Connection to database is not established."}), 500
+
+@app.route('/add_current_data')
+def add_current_data():
+    """
+    Test route to insert current sensor data.
+    """
+    if SensorsReaders_collection is not None:
+        try:
+            sensor_data = {
+                "sensor": "Current", 
+                "value": 1.7, 
+                "unit": "A", 
+                # take current Colombia time and convert to UTC (timezone-aware)
+                "timestamp": datetime.now(ZoneInfo("America/Bogota")).astimezone(timezone.utc)
+            }
+            result = SensorsReaders_collection.insert_one(sensor_data)
+            return jsonify({
+                "message": "Sensor data loaded successfully to 'SensorsReaders'",
                 "id": str(result.inserted_id)
             })
         except Exception as e:
@@ -153,49 +239,157 @@ def agregar_dato_prueba():
 @app.route('/receive_sensor_data', methods=['POST'])
 def receive_sensor_data():
     """
-    Ruta para recibir datos de un sensor externo y guardarlos.
+    Route to receive data from an external sensor and save it.
     """
     if SensorsReaders_collection is None:
-        return jsonify({"error": "La conexión a la base de datos no está establecida."}), 503
+        return jsonify({"error": "Database connection is not established."}), 503
 
     try:
         data = request.get_json()
         
         if not data:
-            return jsonify({"error": "No se proporcionó un payload JSON"}), 400
+            return jsonify({"error": "No JSON payload provided"}), 400
         
-        sensor_type = data.get('sensor_type')
+        sensor_type = data.get('sensor_type') or data.get('sensor')
         value = data.get('value')
         unit = data.get('unit', 'N/A') 
 
         if sensor_type is None or value is None:
-            return jsonify({"error": "Faltan campos obligatorios: 'sensor_type' o 'value'"}), 400
+            return jsonify({"error": "Missing required fields: 'sensor_type'/'sensor' or 'value'"}), 400
 
-        # CRÍTICO: Intentar convertir el valor a flotante.
         try:
             numeric_value = float(value)
         except (ValueError, TypeError):
-             return jsonify({"error": "El campo 'value' debe ser un número convertible (float o int)."}), 400
+             return jsonify({"error": "The 'value' field must be a convertible number (float or int)."}), 400
         
         doc_to_insert = {
             "sensor": sensor_type,
-            "value": numeric_value, 
+            "value": numeric_value,
             "unit": unit,
-            "timestamp": datetime.now() 
+            # use Colombia local time converted to timezone-aware UTC for MongoDB
+            "timestamp": datetime.now(ZoneInfo("America/Bogota")).astimezone(timezone.utc)
         }
         
         result = SensorsReaders_collection.insert_one(doc_to_insert)
 
+        # prepare a JSON-serializable copy for the response
+        response_doc = dict(doc_to_insert)
+        response_doc['timestamp'] = response_doc['timestamp'].isoformat()
+        
         return jsonify({
             "status": "success",
-            "message": "Data sensor received and saved succesfully.",
-            "id_mongo": str(result.inserted_id),
-            "data_received": doc_to_insert
+            "message": "Sensor data received and saved successfully.",
+            "mongo_id": str(result.inserted_id),
+            "data_received": response_doc
         }), 201
     except Exception as e:
-        print(f"Error processing data sensor: {e}")
-        return jsonify({"status": "error", "message": f"Server internal error: {e}"}), 500
+        print(f"Error processing sensor data: {e}")
+        return jsonify({"status": "error", "message": f"Internal server error: {e}"}), 500
+
+# New debug endpoint
+@app.route('/debug/last_records')
+def debug_last_records():
+    """
+    Debug endpoint to view the last records.
+    """
+    if SensorsReaders_collection is None:
+        return jsonify({"error": "No database connection"}), 503
+    
+    try:
+        records = list(SensorsReaders_collection.find().sort("timestamp", -1).limit(10))
+        
+        # Convert ObjectId and datetime to string for JSON
+        for record in records:
+            record['_id'] = str(record['_id'])
+            if 'timestamp' in record:
+                record['timestamp'] = record['timestamp'].isoformat()
+        
+        return jsonify({
+            "count": len(records),
+            "records": records
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/debug/sensors')
+def debug_sensors():
+    """
+    Debug endpoint to see all unique sensor names.
+    """
+    if SensorsReaders_collection is None:
+        return jsonify({"error": "No database connection"}), 503
+    
+    try:
+        unique_sensors = SensorsReaders_collection.distinct('sensor')
+        
+        # Get count for each sensor
+        sensor_info = []
+        for sensor in unique_sensors:
+            count = SensorsReaders_collection.count_documents({'sensor': sensor})
+            latest = SensorsReaders_collection.find_one(
+                {'sensor': sensor},
+                sort=[('timestamp', -1)]
+            )
+            
+            info = {
+                'sensor': sensor,
+                'count': count,
+                'latest_value': latest.get('value') or latest.get('valor') if latest else None,
+                'latest_timestamp': latest['timestamp'].isoformat() if latest and 'timestamp' in latest else None
+            }
+            sensor_info.append(info)
+        
+        return jsonify({
+            "total_sensors": len(unique_sensors),
+            "sensors": sensor_info
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+#------Infinity seeries -----------
+
+@app.route('/infinity_query', methods=['POST', 'GET'])
+def infinity_query():
+    """
+    Ruta para el plugin Grafana Infinity. Devuelve data plana [timestamp, value]
+    """
+    
+    if SensorsReaders_collection is None:
+        return jsonify({"error": "La conexión a la base de datos no está establecida."}), 503
+
+    try:
+        # Consulta de datos (la misma que usaste antes)
+        data_cursor = SensorsReaders_collection.find().sort("timestamp", -1).limit(1000)
+        
+        infinity_data = []
+        for document in data_cursor:
+            value = document.get("value")
+            timestamp_dt = document.get("timestamp")
+
+            if value is not None and timestamp_dt is not None:
+                try:
+                    numeric_value = float(value)
+                    
+                    if isinstance(timestamp_dt, datetime):
+                        # Convertimos a formato ISO 8601 (string) para que Infinity lo entienda fácilmente
+                        timestamp_iso = timestamp_dt.isoformat()
+                        
+                        # Creamos el objeto plano que Infinity espera
+                        infinity_data.append({
+                            "time": timestamp_iso, 
+                            "value": numeric_value
+                        })
+                        
+                except (ValueError, TypeError) as e:
+                    print(f"Advertencia: Error de conversión en documento. {e}")
+            
+        # Infinity espera un array de objetos planos: [{"time": "...", "value": 1.0}, ...]
+        return jsonify(infinity_data)
+
+    except Exception as e:
+        print(f"Error en infinity_query: {e}")
+        return jsonify({"status": "error", "message": f"Error interno del servidor: {e}"}), 500
     
 if __name__ == '__main__':
-    # Flask escucha en 0.0.0.0 y puerto 5001 para ser accesible por Docker
     app.run(host='0.0.0.0', port=5001, debug=True)

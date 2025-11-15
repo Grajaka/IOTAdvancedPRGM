@@ -1,0 +1,26 @@
+{
+  "panelId": 1,
+  "range": {
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2026-01-01T00:00:00.000Z",
+    "raw": {
+      "from": "now-6h",
+      "to": "now"
+    }
+  },
+  "rangeRaw": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "interval": "5s",
+  "intervalMs": 5000,
+  "targets": [
+    {
+      "target": "Temperature_01",
+      "refId": "A",
+      "type": "timeserie"
+    }
+  ],
+  "format": "json",
+  "maxDataPoints": 1000
+}
