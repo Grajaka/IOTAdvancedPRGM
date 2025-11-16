@@ -64,6 +64,60 @@ def parse_grafana_time(value):
             pass
 
     return None
+# ============================
+#        Sensor Data Receiver
+# ============================
+@app.route('/receive_sensor_data', methods=['POST'])
+def receive_sensor_data():
+    """
+    Route to receive data from an external sensor and save it.
+    """
+    if SensorsReaders_collection is None:
+        return jsonify({"error": "Database connection is not established."}), 503
+
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No JSON payload provided"}), 400
+        
+        sensor_type = data.get('sensor_type') or data.get('sensor')
+        value = data.get('value')
+        unit = data.get('unit', 'N/A') 
+
+        if sensor_type is None or value is None:
+            return jsonify({"error": "Missing required fields: 'sensor_type'/'sensor' or 'value'"}), 400
+
+        try:
+            numeric_value = float(value)
+        except (ValueError, TypeError):
+             return jsonify({"error": "The 'value' field must be a convertible number (float or int)."}), 400
+        
+        doc_to_insert = {
+            "sensor": sensor_type,
+            "value": numeric_value,
+            "unit": unit,
+            # use Colombia local time converted to timezone-aware UTC for MongoDB
+            "timestamp": datetime.now(ZoneInfo("America/Bogota")).astimezone(timezone.utc)
+        }
+        
+        result = SensorsReaders_collection.insert_one(doc_to_insert)
+
+        # prepare a JSON-serializable copy for the response
+        response_doc = dict(doc_to_insert)
+        response_doc['timestamp'] = response_doc['timestamp'].isoformat()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Sensor data received and saved successfully.",
+            "mongo_id": str(result.inserted_id),
+            "data_received": response_doc
+        }), 201
+    except Exception as e:
+        print(f"Error processing sensor data: {e}")
+        return jsonify({"status": "error", "message": f"Internal server error: {e}"}), 500
+
+
 
 # ============================
 # BASIC ROUTES
@@ -169,8 +223,9 @@ def debug_last():
         d["timestamp"] = d["timestamp"].isoformat()
     return jsonify(docs)
 
-#------Infinity seeries -----------
-
+# ============================
+# Grafana Infinity Query
+# =========================
 @app.route('/infinity_query', methods=['GET'])
 def infinity_query():
     """
@@ -218,7 +273,9 @@ def infinity_query():
         print(f"Error en infinity_query: {e}")
         return jsonify([]), 500
 
-#-----------------Grafana ---------------
+# ============================
+# Grafana Dashboard Embed
+# =========================
 @app.route('/dashboard')
 def dashboard():
     """Displays the embedded Grafana dashboard."""
