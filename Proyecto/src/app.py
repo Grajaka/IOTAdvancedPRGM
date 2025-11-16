@@ -17,6 +17,8 @@ mongo_uri = os.environ.get("MONGO_URI")
 if not mongo_uri:
     mongo_uri = "mongodb+srv://kjaramillo1_db_user:nL8dP3yzNhJXpRhC@cluster0.7wetitv.mongodb.net/IOTAdvanced?appName=Cluster0"
 
+grafana_embed_url = os.environ.get('GRAFANA_EMBED_URL','http://localhost:3000/public-dashboards/65fe92bf244e40dbb7d0e1efd4e4142b?orgId=1&kiosk')
+                                   
 app = Flask(__name__)
 app.config["MONGO_URI"] = mongo_uri
 CORS(app)
@@ -276,10 +278,12 @@ def infinity_query():
 # ============================
 # Grafana Dashboard Embed
 # =========================
+
 @app.route('/dashboard')
 def dashboard():
     """Displays the embedded Grafana dashboard."""
-    return render_template('dashboard.html')
+    return render_template('dashboard.html',grafana_embed_url=grafana_embed_url)
+
 
 # ============================
 # MAIN
