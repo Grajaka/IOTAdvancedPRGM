@@ -1,0 +1,8 @@
+FROM grafana/grafana-oss:latest
+
+RUN grafana-cli plugins install grafana-piechart-panel
+
+
+EXPOSE 3000
+
+vOLUME /var/lib/grafana
