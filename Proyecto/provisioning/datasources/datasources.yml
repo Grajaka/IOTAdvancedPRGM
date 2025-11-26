@@ -4,7 +4,7 @@ datasources:
   - name: Flask IoT API
     type: IOTSensors
     access: proxy
-    url: https://iotadvancedprgm-1.onrender.com
+    url: https://iotadvancedprgm-2.onrender.com
     isDefault: true
     editable: true
     jsonData:
