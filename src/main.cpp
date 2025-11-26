@@ -10,7 +10,7 @@
 // --- 1. CONFIGURACIÓN DE RED Y SERVIDOR ---
 const char* ssid = "POCO X7 Pro";
 const char* password = "12345678.";
-const char* serverUrl = "https://iotadvancedprgm-2.onrender.com/receive_sensor_data"; 
+const char* serverUrl = "https://iotadvancedprgm.onrender.com/receive_sensor_data"; 
 
 // ---Mail Configuration ---
 #define emailSenderAccount    "iotsensors74@gmail.com"
