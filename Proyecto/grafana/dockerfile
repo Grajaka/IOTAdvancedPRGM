@@ -2,6 +2,7 @@ FROM grafana/grafana-oss:latest
 
 RUN grafana-cli plugins install grafana-piechart-panel
 
+COPY provisioning/ /etc/grafana/provisioning/
 
 EXPOSE 3000
 

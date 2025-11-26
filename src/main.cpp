@@ -14,7 +14,7 @@ const char* serverUrl = "https://iotadvancedprgm.onrender.com/receive_sensor_dat
 
 // ---Mail Configuration ---
 #define emailSenderAccount    "iotsensors74@gmail.com"
-#define emailSenderPassword   "*************"  // App Password for Gmail
+#define emailSenderPassword   "wpop vmhq ddlz qhnd"  // App Password for Gmail
 #define smtpServer            "smtp.gmail.com"
 #define smtpServerPort        465
 #define emailSubject          "[ALERT] ESP32 Temperature"
