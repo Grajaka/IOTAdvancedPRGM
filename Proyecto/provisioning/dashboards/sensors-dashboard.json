@@ -1,0 +1,117 @@
+{
+  "dashboard": {
+    "title": "IoT Sensors Dashboard",
+    "uid": "iot-sensors-001",
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "gauge",
+        "title": "Temperature",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "h": 8,
+          "w": 12
+        },
+        "datasource": {
+          "type": "IOTSensors",
+          "uid": "flask-iot-api"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "type": "json",
+            "source": "url",
+            "format": "timeseries",
+            "url": "/infinity_query",
+            "url_options": {
+              "method": "GET"
+            },
+            "parser": "backend",
+            "columns": [
+              {
+                "selector": "time",
+                "text": "Time",
+                "type": "timestamp"
+              },
+              {
+                "selector": "sensor",
+                "text": "Sensor",
+                "type": "string"
+              },
+              {
+                "selector": "value",
+                "text": "Value",
+                "type": "number"
+              }
+            ]
+          }
+        ],
+        "transformations": [
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "fieldName": "sensor",
+                  "config": {
+                    "id": "equal",
+                    "options": {
+                      "value": "Temperature_01"
+                    }
+                  }
+                }
+              ],
+              "type": "include",
+              "match": "all"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "celsius",
+            "decimals": 1,
+            "min": 0,
+            "max": 50,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 25,
+                  "color": "yellow"
+                },
+                {
+                  "value": 30,
+                  "color": "red"
+                }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": "/^value$/"
+          },
+          "orientation": "auto",
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

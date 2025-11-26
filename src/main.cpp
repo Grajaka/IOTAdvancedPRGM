@@ -10,7 +10,7 @@
 // --- 1. CONFIGURACIÓN DE RED Y SERVIDOR ---
 const char* ssid = "POCO X7 Pro";
 const char* password = "12345678.";
-const char* serverUrl = "https://iotadvancedprgm.onrender.com/receive_sensor_data"; 
+const char* serverUrl = "https://iotadvancedprgm-2.onrender.com/receive_sensor_data"; 
 
 // ---Mail Configuration ---
 #define emailSenderAccount    "iotsensors74@gmail.com"
@@ -103,7 +103,7 @@ void sendAlertEmail(const char* sensor, float value, const char* unit, float thr
 
 // --- 2. DEFINIR PINES Y CALIBRACIÓN ---
 #define ONE_WIRE_BUS 4
-#define CURRENT_SENSOR_PIN 19
+#define CURRENT_SENSOR_PIN 17 //change 19
 
 const float CALIBRATION_FACTOR = 5.51; 
 
