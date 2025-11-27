@@ -18,13 +18,12 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 0,
   "links": [],
   "panels": [
     {
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
-        "uid": "ef5bxxntac1dsd"
+        "uid": "iot-sensors-infinity"
       },
       "fieldConfig": {
         "defaults": {
@@ -71,14 +70,15 @@
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "red",
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "celsius"
         },
         "overrides": []
       },
@@ -124,7 +124,7 @@
           ],
           "datasource": {
             "type": "yesoreyeram-infinity-datasource",
-            "uid": "ef5bxxntac1dsd"
+            "uid": "iot-sensors-infinity"
           },
           "filters": [],
           "format": "table",
@@ -155,15 +155,6 @@
                   }
                 },
                 "fieldName": "Sensor Type"
-              },
-              {
-                "config": {
-                  "id": "equal",
-                  "options": {
-                    "value": "Temperature_01"
-                  }
-                },
-                "fieldName": "Sensor Type"
               }
             ],
             "match": "all",
@@ -176,7 +167,7 @@
   ],
   "preload": false,
   "schemaVersion": 42,
-  "tags": [],
+  "tags": ["IOT", "Temperature"],
   "templating": {
     "list": []
   },
@@ -187,6 +178,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "TemperatureRender",
-  "uid": "adz85hq",
-  "version": 2
+  "uid": "temperature-render-001",
+  "version": 1,
+  "refresh": "5s"
 }

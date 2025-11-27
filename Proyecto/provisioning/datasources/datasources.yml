@@ -1,13 +1,15 @@
 apiVersion: 1
 
 datasources:
-  - name: Flask IoT API
-    type: IOTSensors
+  - name: IOTSensors
+    type: yesoreyeram-infinity-datasource
     access: proxy
-    url: https://iotadvancedprgm-2.onrender.com
+    # IMPORTANTE: Cambia esta URL por la de tu servicio Flask en Render
+    url: https://iotadvancedprgm.onrender.com
     isDefault: true
     editable: true
-    jsonData:
-      timeField: time
     version: 1
-    uid: flask-iot-api
+    uid: iot-sensors-infinity
+    jsonData:
+      # Configuraciones básicas del datasource Infinity
+      tlsSkipVerify: false
