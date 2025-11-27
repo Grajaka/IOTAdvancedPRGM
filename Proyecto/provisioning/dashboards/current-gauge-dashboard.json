@@ -40,22 +40,22 @@
               },
               {
                 "color": "yellow",
-                "value": 25
+                "value": 5
               },
               {
                 "color": "orange",
-                "value": 30
+                "value": 8
               },
               {
                 "color": "red",
-                "value": 35
+                "value": 10
               }
             ]
           },
-          "unit": "celsius",
-          "decimals": 1,
+          "unit": "amp",
+          "decimals": 2,
           "min": 0,
-          "max": 50
+          "max": 15
         },
         "overrides": []
       },
@@ -118,7 +118,7 @@
           }
         }
       ],
-      "title": "Motor Temperature",
+      "title": "Motor Current",
       "transformations": [
         {
           "id": "filterByValue",
@@ -128,7 +128,7 @@
                 "config": {
                   "id": "equal",
                   "options": {
-                    "value": "Temperature_01"
+                    "value": "Current_01"
                   }
                 },
                 "fieldName": "Sensor Type"
@@ -149,7 +149,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-GrYlRd"
+            "mode": "continuous-BlPu"
           },
           "custom": {
             "axisBorderShow": false,
@@ -169,7 +169,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "smooth",
-            "lineWidth": 3,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -195,12 +195,12 @@
               },
               {
                 "color": "red",
-                "value": 35
+                "value": 10
               }
             ]
           },
-          "unit": "celsius",
-          "decimals": 1
+          "unit": "amp",
+          "decimals": 2
         },
         "overrides": []
       },
@@ -267,7 +267,7 @@
           }
         }
       ],
-      "title": "Temperature History",
+      "title": "Current History",
       "transformations": [
         {
           "id": "filterByValue",
@@ -277,7 +277,7 @@
                 "config": {
                   "id": "equal",
                   "options": {
-                    "value": "Temperature_01"
+                    "value": "Current_01"
                   }
                 },
                 "fieldName": "Sensor Type"
@@ -308,8 +308,8 @@
             }
           },
           "mappings": [],
-          "unit": "celsius",
-          "decimals": 1
+          "unit": "amp",
+          "decimals": 2
         },
         "overrides": []
       },
@@ -384,7 +384,7 @@
           }
         }
       ],
-      "title": "Temperature Distribution",
+      "title": "Current Distribution",
       "transformations": [
         {
           "id": "filterByValue",
@@ -394,7 +394,7 @@
                 "config": {
                   "id": "equal",
                   "options": {
-                    "value": "Temperature_01"
+                    "value": "Current_01"
                   }
                 },
                 "fieldName": "Sensor Type"
@@ -427,16 +427,16 @@
               },
               {
                 "color": "yellow",
-                "value": 25
+                "value": 5
               },
               {
                 "color": "red",
-                "value": 35
+                "value": 10
               }
             ]
           },
-          "unit": "celsius",
-          "decimals": 1
+          "unit": "amp",
+          "decimals": 2
         },
         "overrides": []
       },
@@ -505,7 +505,7 @@
           }
         }
       ],
-      "title": "Average Temperature",
+      "title": "Average Current",
       "transformations": [
         {
           "id": "filterByValue",
@@ -515,7 +515,7 @@
                 "config": {
                   "id": "equal",
                   "options": {
-                    "value": "Temperature_01"
+                    "value": "Current_01"
                   }
                 },
                 "fieldName": "Sensor Type"
@@ -548,8 +548,8 @@
               }
             ]
           },
-          "unit": "celsius",
-          "decimals": 2
+          "unit": "amp",
+          "decimals": 3
         },
         "overrides": []
       },
@@ -619,7 +619,7 @@
           }
         }
       ],
-      "title": "Temperature Statistics",
+      "title": "Current Statistics",
       "transformations": [
         {
           "id": "filterByValue",
@@ -629,7 +629,7 @@
                 "config": {
                   "id": "equal",
                   "options": {
-                    "value": "Temperature_01"
+                    "value": "Current_01"
                   }
                 },
                 "fieldName": "Sensor Type"
@@ -647,7 +647,7 @@
   "schemaVersion": 42,
   "tags": [
     "IOT",
-    "Temperature",
+    "Current",
     "Motor"
   ],
   "templating": {
@@ -659,8 +659,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Motor Temperature Monitoring",
-  "uid": "temperature-monitor-001",
+  "title": "Motor Current Monitoring",
+  "uid": "current-monitor-001",
   "version": 1,
   "refresh": "5s"
 }

@@ -662,5 +662,5 @@
   "title": "Motor Temperature Monitoring",
   "uid": "temperature-monitor-001",
   "version": 1,
-  "refresh": "5s"
+  "refresh": "1s"
 }
